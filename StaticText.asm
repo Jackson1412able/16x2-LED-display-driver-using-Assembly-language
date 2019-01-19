@@ -1,179 +1,190 @@
-        ORG	$400400			*START PROGRAM AT 400400H IN RAM
-        MOVEA.L	#$800001,A0		*$800001 PGCR in A0 address register
-        MOVE.B	#$80,$C(A0)		*PACR contains 1000 0000 (port A submode 1x)
-        MOVE.B	#$FF,$4(A0)		*PADDR contains 1111 1111 (port A as output)
-        MOVE.B 	#$80,$E(A0)		*PBCR contains 1000 0000 (port B submode 1x)
-	MOVE.B 	#$E0,$6(A0)		*PBDDR contains 1110 0000 (pin 7,6,5 of port B as output, the rest inputs)
-	MOVE.B 	#$14,$8(A0)		*PCDDR contains 0001 0100 (pin 4,2 of port C as output, the rest inputs)
-	BSR	_CLEAR			*GO TO SUBROUTINE _CLEAR
-	BSR	_DELAY			*GO TO SUBROUTINE _DELAY
+;************************************************************************************************************************     	
+;       THIS PROGRAM WAS DEVELOPED FOR A MICROCHIP PIC18F4550 MICROCONTROLLER TO DISPLAY THE FOLLOWING STATIC           ;
+;       MESSAGE ON THE LCD DISPLAY:                                                                                     ;
+;                                                                                                                       ;
+;                       ROW 1: MicroP & MicroC,                                                                         ;
+;                       ROW 2: You Really Rock!                                                                         ;
+;                                                                                                                       ;
+;       THE CONNECTIONS OF THE MICROCHIP PIC18F4550 MICROCONTROLLER AND THE 16X2 LCD DISPLAY ARE SHOWN AS BELOW:        ;
+;                                                                                                                       ;
+;			PORTD output to LCD display                                                                     ;
+;			RC0 = RS                                                                                        ;
+;			RC1 = R/W                                                                                       ;
+;			RC2 = E                                                                                         ;
+;                                                                                                                       ;
+;************************************************************************************************************************
 
-*************************************************************************************************************************
-*** LCD INITIALIZATION SUBROUTINE
-	BSR	_DELAY			*GO TO SUBROUTINE _DELAY
-        
-*** FUNCTION SET COMMAND (8-BIT INTERFACE): FIRST TIME (BF cannot be checked before this command)
-        BCLR	#5,$12(A0)		*put RS line to 0				PBDR bit 5 cleared
-        BCLR	#6,$12(A0)		*put R/W line to 0				PBDR bit 6 cleared
-        MOVE.B	#$30,$10(A0)		*Function Set Command - 8-bit length		PADR contains 0011 0000
-        BSR	_PULS_E			*GO TO SUBROUTINE _PULS_E
-        BSR	_DELAY			*GO TO SUBROUTINE _DELAY
-        
-*** FUNCTION SET COMMAND (8-BIT INTERFACE): SECOND TIME (BF cannot be checked before this command)
-        BCLR	#5,$12(A0)		*put RS line to 0				PBDR bit 5 cleared
-        BCLR	#6,$12(A0)		*put R/W line to 0				PBDR bit 6 cleared
-        MOVE.B	#$30,$10(A0)		*Function Set Command - 8-bit length		PADR contains 0011 0000
-        BSR	_PULS_E			*GO TO SUBROUTINE _PULS_E
-	BSR	_DELAY			*GO TO SUBROUTINE _DELAY
-        
-*** FUNCTION SET COMMAND (8-BIT INTERFACE): THIRD TIME (BF can be checked after this command)
-        BCLR	#5,$12(A0)		*put RS line to 0				PBDR bit 5 cleared
-        BCLR	#6,$12(A0)		*put R/W line to 0				PBDR bit 6 cleared
-        MOVE.B	#$30,$10(A0)		*Function Set Command - 8-bit length		PADR contains 0011 0000
-        BSR	_PULS_E			*GO TO SUBROUTINE _PULS_E
-        BSR	_DELAY			*GO TO SUBROUTINE _DELAY
-        
-*** FUNCTION SET COMMAND (8-BIT INTERFACE; 2-LINE; 5X7 DOTS): THIRD TIME (BF can be checked after this command)
-        BCLR	#5,$12(A0)		*put RS line to 0				PBDR bit 5 cleared
-        BCLR	#6,$12(A0)		*put R/W line to 0				PBDR bit 6 cleared
-        MOVE.B	#$38,$10(A0)		*Function Set Command - 8-bit length, 2-line display, 5x7 dots	PADR contains 0011 1000
-        BSR	_PULS_E			*GO TO SUBROUTINE _PULS_E
+;*** DECLARING AND CONFIGURING A MICROCONTROLLER ************************************************************************   
+                        list p=18F4550, f=inhx32
+                        #include "p18f4550.inc"
+                        
+;*** CONFIGURATION SETTING OF MICROCONTROLLER ***************************************************************************   
+                        CONFIG FOSC=INTOSC_HS,WDT=OFF,LVP=OFF
+                        CONFIG DEBUG=OFF,CP0=OFF,CP1=OFF,CP2=OFF,CP3=OFF
+                        
+;*** STRUCTURE OF PROGRAM MEMORY ****************************************************************************************   
+                        ORG	0x00            ;BASE ADDRESS
+Main
+delayyy			equ	0x08            ;DELAYYY REGISTER ASSIGNED TO LOCATION 0X08
+delayyyy		equ	0x09            ;DELAYYYY REGISTER ASSIGNED TO LOCATION 0X09
+checkDDR		equ	0x0a            ;CHECKDDR REGISTER ASSIGNED TO LOCATION 0X0A 	
+			movlw	0x0f            ;MOVE 0X0F LITERAL TO WORKING REGISTER
+			movwf	delayyy	        ;MOVE 0X0F FROM WORKING REGISTER TO DELAYYY
+			movwf	delayyyy        ;MOVE 0X0F FROM WORKING REGISTER TO DELAYYYY
+			clrf	PORTD           ;CLEAR CONTENTS IN PORTD
+			clrf	PORTC		;CLEAR CONTENTS IN PORTC		               
+        		clrf 	TRISD		;SET PORTD AS OUTPUT
+        		clrf    TRISC		;SET PORTC AS OUTPUT        		
+        		call	ldelay          ;LONG DELAY, AT LEAST 4.1MS
+                        
+;****FUNCTION SET COMMAND (8-BIT INTERFACE): FIRST TIME******************************************************************     		
+        		bcf	PORTC,0		;RS=0
+			bcf	PORTC,1		;RW=0
+			movlw	0x30            ;0011 0000
+			movwf	PORTD           ;FUNCTION SET COMMAND 0011 0000
+			call	pulse           ;SEND FUNCTION SET COMMAND TO LCD
+			call	sdelay	        ;DELAY, AT LEAST 100US
+                        
+;****FUNCTION SET COMMAND (8-BIT INTERFACE): SECOND TIME*****************************************************************		
+			bcf	PORTC,0		;RS=0
+			bcf	PORTC,1		;RW=0
+			movlw	0x30	        ;0011 0000
+			movwf	PORTD           ;FUNCTION SET COMMAND 0011 0000
+			call	pulse           ;SEND FUNCTION SET COMMAND TO LCD
+			call	sdelay	        ;DELAY
+                        
+;****FUNCTION SET COMMAND (8-BIT INTERFACE): THIRD TIME******************************************************************   			
+			bcf	PORTC,0		;RS=0
+			bcf	PORTC,1		;RW=0
+			movlw	0x30	        ;0011 0000
+			movwf	PORTD           ;FUNCTION SET COMMAND 0011 0000
+			call	pulse           ;SEND FUNCTION SET COMMAND TO LCD
+			call	sdelay	        ;DELAY
+                        
+;****FUNCTION SET COMMAND (8-BIT INTERFACE; 2-LINE; 5X7 DOTS)************************************************************   
+			bcf	PORTC,0		;RS=0
+			bcf	PORTC,1		;RW=0
+			movlw	0x38		;0011 1000
+			movwf	PORTD           ;N=1(2 line display), F=0(5x7 dots)
+			call	pulse           ;SEND FUNCTION SET COMMAND TO LCD
+			call	checkBF	        ;CHECK IF LCD IS BUSY
+                        
+;****TURN DISPLAY OFF****************************************************************************************************   
+                        bcf     PORTC,0		;RS=0
+                        bcf     PORTC,1		;RW=0
+                        movlw   0x08		;0000 1000
+                        movwf   PORTD           ;DISPLAY OFF, CURSOR OFF, CURSOR BLINK OFF
+                        call    pulse           ;SEND INSTRUCTION TO LCD
+                        call    checkBF         ;CHECK IF LCD IS BUSY
+                        
+;****CLEAR DISPLAY*******************************************************************************************************
+                        bcf     PORTC,0		;RS=0
+                        bcf     PORTC,1		;RW=0
+                        movlw   0x01		;0000 0001
+                        movwf   PORTD           ;CLEAR DISPLAY
+                        call    pulse           ;SEND INSTRUCTION TO LCD
+                        call    checkBF         ;CHECK IF LCD IS BUSY
+                        
+;****ENTRY MODE SET: INCREMENT DISPLAY DATA RAM (DD RAM) ADDRESS BY 1 AND SHIFT THE ENTIRE DISPALY TO THE LEFT***********
+                        bcf     PORTC,0		;RS=0
+                        bcf     PORTC,1		;RW=0
+                        movlw   0x06		;0000 0110
+                        movwf   PORTD           ;I/D=1(INCREMENT DDRAM), S=0(NO SHIFT)
+                        call    pulse           ;SEND INSTRUCTION TO LCD
+                        call    checkBF         ;CHECK IF LCD IS BUSY
+                        
+;****TURN DISPLAY ON*****************************************************************************************************              
+			bcf	PORTC,0		;RS=0
+			bcf	PORTC,1		;RW=0
+			movlw	0x0e		;0000 1110
+			movwf	PORTD           ;C=1(cursor on), B=0(blink off)
+			call	pulse           ;SEND INSTRUCTION TO LCD
+			call	checkBF         ;CHECK IF LCD IS BUSY
+                        
+;****COPY CONTENTS FROM TABLE********************************************************************************************   				
+senddata		movlw	upper(data1)    ;COPY CONTENTS FROM UPPER BYTE OF DATA1
+			movwf	TBLPTRU         ;COPY CONTENTS POINTED BY PROGRAM MEMORY TABLE POINTER UPPER BYTE
+			movlw	high(data1)     ;COPY CONTENTS FROM HIGH BYTE OF DATA1
+			movwf	TBLPTRH         ;COPY CONTENTS TO PROGRAM MEMORY TABLE POINTER HIGH BYTE
+			movlw	low(data1)      ;COPY CONTENTS FROM LOW BYTE OF DATA1
+			movwf	TBLPTRL         ;COPY CONTENTS TO PROGRAM MEMORY TABLE POINTER LOW BYTE
 
-*************************************************************************************************************************
-***LCD INITIALIZATION SUBROUTINE (CONTINUED)
+;****MAIN PROGRAM********************************************************************************************************   
+lcdoutput		call	checkDDRAM      ;CHECK DDRAM ADDRESS
+			tblrd*+                 ;INCREMENT TABLE POINTER
+			movf	TABLAT,w        ;EXTRACT CHARACTER AND COPY TO WORKING REGISTER
+			iorlw	0x00            ;CHECK IF IT IS 0X00 OR 0 IN DECIMAL AND HEXADECIMAL, IF 0, ZERO FLAG HIGH
+			btfsc	STATUS,2	;IF ZERO FLAG HIGH, DONT SKIP NEXT INSTRUCTION
+			bra	endd		;END PROGRAM
+			call	display         ;PROCEED TO SEND DATA TO LCD
+			goto	lcdoutput       ;BACK TO LCDOUTPUT LABEL AGAIN
+				
+;************************************************************************************************************************
+;*** SUBROUTINES ********************************************************************************************************
+;************************************************************************************************************************
+;****SEND DATA FROM PORTD TO LCD*****************************************************************************************   
+display			movwf	PORTD           ;COPY CHARACTER TO PORTD
+			bsf	PORTC,0		;RS=1
+			bcf	PORTC,1		;R/W=0
+			call	pulse           ;SEND PORTD DATA TO LCD
+			call	sdelay          ;DELAY
+			return                  ;RETURN FROM SUBROUTINE
+                        
+;****CUSTOM DELAY SUBROUTINE*********************************************************************************************
+ldelay			call	sdelay          ;JUMP TO SDELAY LABEL
+			decfsz	delayyy,f       ;DECREASE VALUE IN DELAYYY BY 1, SKIP NEXT INSTRUCTION IF ZF IS HIGH
+			bra	ldelay          ;JUMP TO LDELAY LABEL
+			return                  ;RETURN FROM SUBROUTINE
+                        
+sdelay			decfsz	delayyyy,f      ;DECREASE VALUE IN DELAYYYY BY 1, SKIP NEXT INSTRUCTION IF ZF HIGH
+			bra	sdelay          ;JUMP TO SDELAY LABEL
+			return                  ;RETURN FROM SUBROUTINE
+                        
+;****ENABLING DATA FROM PIC18F4550 TO BE SENT TO LCD**********************************************************************
+pulse			bsf	PORTC,2		;E=1
+			call	sdelay          ;DELAY
+			bcf	PORTC,2		;E=0
+			return                  ;RETURN FROM SUBROUTINE
+                        
+;****CHECK IF LCD IS BUSY BY CHECKING BUSY FLAG***************************************************************************
+checkBF			setf	TRISD		;SET PORTD AS INPUT
+			bcf	PORTC,0		;RS=0
+			bsf	PORTC,1		;R/W=1
+			nop
+			bsf	PORTC,2		;E=1
+			nop
+			movf	PORTD,0		;MOVE READ DATA TO WORKING REGISTER
+			bcf	PORTC,2		;E=0
+			nop
+			btfsc	WREG,7		;CHECK BUSY FLAG OR 7TH BIT, SKIP NEXT INSTRUCTION IF BF LOW
+			bra	checkBF		;RECHECK BUSY FLAG
+			clrf	TRISD		;SET PORTD AS OUTPUT
+			return                  ;RETURN FROM SUBROUTINE
+                        
+;****CHECK DDRAM ADDRESS**************************************************************************************************
+checkDDRAM		movlw	0x10            ;0X10 IS 17 IN DECIMAL
+			movwf	checkDDR	;MOVE 0X10 LITERAL TO CHECKDDR REGISTER
+			setf	TRISD		;SET PORTD AS INPUT
+			bcf	PORTC,0		;RS CLEARED
+			bsf	PORTC,1		;R/W SET
+			nop
+			bsf	PORTC,2		;E SET
+			nop
+			movf	PORTD,0		;MOVE READ DATA TO WORKING REGISTER
+			bcf	PORTC,2		;E CLEARED
+			nop
+			clrf	TRISD		;SET PORTD AS OUTPUT
+			bcf	WREG,7		;CLEAR BUSY FLAG OR 7TH BIT
+			cpfseq	checkDDR        ;COMPARE READ ADDRESS AND ADDRESS STORED IN CHECKDDR REGISTER, SKIP NEXT IF EQUAL
+			bra	exit
+			bcf	PORTC,0		;RS CLEARED
+			bcf	PORTC,1		;R/W CLEARED
+			movlw	0xc0		;ADDRESS FOR SECOND ROW FIRST COLUMN
+			movwf	PORTD		;WRITE ADDRESS TO PORTD
+			call	pulse		;SEND ADDRESS FROM PORTD TO LCD
+			call	sdelay          ;DELAY
+exit			return                  ;RETURN FROM SUBROUTINE
 
-REPEAT
-	BSR	_CHK_BF			*CHECK BUSY FLAG	
-    
-*** TURN DISPLAY OFF
-        BCLR	#5,$12(A0)		*put RS line to 0				PBDR bit 5 cleared
-        BCLR	#6,$12(A0)		*put R/W line to 0				PBDR bit 6 cleared
-        MOVE.B	#$08,$10(A0)		*turn display OFF				PADR contains 0000 1000
-        BSR	_PULS_E			*GO TO SUBROUTINE _PULS_E
-        BSR	_CHK_BF			*CHECK BUSY FLAG	
-        
-*** CLEAR DISPLAY
-        BCLR	#5,$12(A0)		*put RS line to 0				PBDR bit 5 cleared
-        BCLR	#6,$12(A0)		*put R/W line to 0				PBDR bit 6 cleared
-        MOVE.B	#$01,$10(A0)		*clear display					PADR contains 0000 0001
-        BSR	_PULS_E			*GO TO SUBROUTINE _PULS_E
-        BSR	_CHK_BF			*CHECK BUSY FLAG
-        
-*** ENTRY MODE SET: INCREMENT DISPLAY DATA RAM (DD RAM) ADDRESS BY 1 AND SHIFT THE ENTIRE DISPALY TO THE LEFT
-        BCLR	#5,$12(A0)		*put RS line to 0				PBDR bit 5 cleared
-        BCLR	#6,$12(A0)		*put R/W line to 0				PBDR bit 6 cleared
-        MOVE.B	#$06,$10(A0)		*increment DD RAM but do not shift the display	PADR contains 0000 0110
-        BSR	_PULS_E			*GO TO SUBROUTINE _PULS_E
-        BSR	_CHK_BF			*CHECK BUSY FLAG
-        
-*** TURN DISPLAY ON
-        BCLR	#5,$12(A0)		*put RS line to 0				PBDR bit 5 cleared
-        BCLR	#6,$12(A0)		*put R/W line to 0				PBDR bit 6 cleared
-        MOVE.B	#$0E,$10(A0)		*turn display ON				PADR contains 0000 1110
-        BSR	_PULS_E			*GO TO SUBROUTINE _PULS_E
-        
-*************************************************************************************************************************
-*************************************************************************************************************************
-
-MAIN
-	BSR	_CHK_BF			*CHECK BUSY FLAG
-AGAIN
-        MOVEA.L	#TABLE,A1		*load data from #TABLE using A1 addresss register	
-DISPLAY
-        BSR	_CHK_DDR		*CHECK DISPLAY DATA RAM ADDRESS
-	BSET	#5,$12(A0)		*put RS line to 1				PBDR bit 5 set
-	BCLR	#6,$12(A0)		*put R/W line to 0				PBDR bit 6 cleared
-	MOVE.B	(A1)+,$10(A0)		*COPY CONTENTS FROM #TABLE TO PADR
-	BSR	_PULS_E			*GO TO SUBROUTINE _PULS_E
-	BSR	_DELAY			*GO TO SUBROUTINE _DELAY
-	CMPI.B	#'<',(A1)		*CHECK THE CONTENTS CONTAINED IN ADDRESS SPECIFIED IN A1 AND COMPARE WITH '<'
-	BNE	DISPLAY			*IF '<', SKIP THIS INSTRUCTION, IF NOT '<', JUMP TO DISPLAY LABEL
-	BRA	REPEAT			*JUMP TO BRANCH REPEAT
-        
-*************************************************************************************************************************
-
-_CLEAR
-        MOVE.B	#$00,$10(A0)		*PADR contains 0000 0000
-	MOVE.B	#$00,$12(A0)		*PBDR contains 0000 0000
-CLEAR_
-        RTS
-        
-*************************************************************************************************************************
-
-_DELAY	
-	MOVE.L	#55555,D0		*D0 contains 55555 in decimal
-DEL1	
-	SUBQ.L	#1,D0			*D0 is subtracted by 1 at a time (subtraction is performed 55555 times)
-	BNE	DEL1			*Branch taken if Z flag = 0 (not zero)
-DELAY_	
-	RTS				*RETURN FROM SUBROUTINE
-	
-*************************************************************************************************************************
-***PULSING OF "E LINE" SUBROUTINE: WHEN WRITING (i.e., SENDING COMMANDS OR CHARACTER DATA) TO THE DISPLAY, DATA IS 
-***TRANSFERRED ONLY ON THE HIGH TO LOW TRANSITION OF THIS SIGNAL
-
-_PULS_E
-	BSET	#7,$12(A0)		*take E line HIGH				PBDR bit 7 set
-	NOP				*hold it high for one clock cycle
-	BCLR	#7,$12(A0)		*take E line LOW 				PBDR bit 7 cleared
-PULS_E_
-	RTS				*RETURN FROM SUBROUTINE
-	
-*************************************************************************************************************************
-***CHECKING OF LCD CONTROLLER BUSY FLAG SUBROUTINE: THE LCD CONTROLLER IS SLOWER THAN THE MICROPROCESSOR. SO, WHEN THE
-***MICROPROCESSOR IS TOLD TO DO SOMETHING, WE HAVE TO CHECK WHETHER OR NOT IT HAS COMPLETED THE GIVEN TASK BEFORE ASKING
-***IT TO EXECUTE A NEW ONE. WE CAN CHECK THE BUSY FLAG (BF) OF THE LCD CONTROLLER BY READING BACK INFO FROM IT. IF BF = 1,
-***THE LCD CONTROLLER IS STILL BUSY. CONTRARY TO WRITING, READING FROM THE DISPLAY CAN BE PERFORMED WHEN THE "E LINE" IS
-***HIGH AND THE DATA REMAIN AVAILABLE UNTIL THE "E LINE" IS TAKEN LOW AGAIN.
-
-_CHK_BF		
-        MOVE.B	#$00,$4(A0)		*PADDR contains 0000 0000 (port A as input)
-	BCLR	#5,$12(A0)		*put RS line to 0, PBDR bit 5 cleared
-	BSET	#6,$12(A0)		*put R/W line to 1, PBDR bit 6 set
-	NOP
-	BSET	#7,$12(A0)		*take E line HIGH, PBDR bit 7 set
-	NOP				*hold it high for one clock cycle
-	MOVE.B	$10(A0),D6		*D6 contains PADR
-      	BCLR	#7,$12(A0)		*take E line LOW, PBDR bit 7 cleared
-     	NOP
-     	BTST	#7,D6			*Check bit 7 in D6, affect Z flag, Z = 0 if bit =1, Z=1 if bit = 0
-     	BNE	_CHK_BF			*Loop again if Z flag = 1
-     	MOVE.B	#$FF,$4(A0)		*PADDR contains 1111 1111 (port A as output)     
-CHK_BF_	
-        RTS
-        
-*************************************************************************************************************************
-***CHECKING OF DISPLAY DATA RAM (DD RAM) ADDRESS SUBROUTINE: THE LCD DISPLAY USED IS A 16 CHARACTER X 2 LINE DISPLAY.
-***EVEN THOUGH IT IS SPECIFIED AS A 16 CHARACTER/ROW DISPLAY, WE CAN ACTUALLY STORE UP TO 40 CHARACTERS/ROW - 
-***THE DISPLAY CAN ONLY SHOW THE FIRST 16 CHARACTERS REPRESENTED BY DD RAM LOCATIONS $00 THROUGH $0F. HERE, WE STORE UP TO 
-***16 CHARACTERS PER ROW. SO, WE NEED TO CHECK WHETHER THE CURSOR HAS ALREADY REACHED AND COVERED LOCATION $0F.
-
-_CHK_DDR	
-        MOVE.B	#$00,$4(A0)		*prepare Port A as input port			PADDR contains 0000 0000 (port A as input)
-      	BCLR	#5,$12(A0)		*put RS line to 0				PBDR bit 5 cleared
-      	BSET	#6,$12(A0)		*put R/W line to 1				PBDR bit 6 set			
-      	NOP
-      	BSET	#7,$12(A0)		*take E line HIGH				PBDR bit 7 set
-        NOP				*hold it high for one clock cycle
-        MOVE.B	$10(A0),D5		*read info from LCD display (i.e., LCD controller)	D5 contains info of PADR
-        BCLR	#7,$12(A0)		*take E line LOW				PBDR bit 7 cleared
-        NOP
-        MOVE.B	#$FF,$4(A0)		*change back Port A as output port		PADDR contains 1111 1111 (port A as output)
-        ANDI.B	#$7F,D5			*Ignore busy flag(8th bit)
-        CMPI.B	#$10,D5			*17th segment in LCD
-        BNE	CHK_DDR_
-        BCLR	#5,$12(A0)		*put RS line to 0				PBDR bit 5 cleared
-        BCLR	#6,$12(A0)		*put R/W line to 0				PBDR bit 6 cleared
-        MOVE.B	#$C0,$10(A0)		*Set Display Address Command - go to first location of second row	PADR contains 1100 0000
-        BSR	_PULS_E			*GO TO SUBROUTINE _PULS_E
-        BSR	_CHK_BF			*GO TO SUBROUTINE _CHK_BF
-CHK_DDR_
-        RTS
-	
-*************************************************************************************************************************
-
-TABLE	
-        DC.B	'C','O','N','G','R','A','T','U','L','A','T','I','O','N','S',','
-	DC.B	'Y','o','u',' ','m','a','d','e',' ','i','t',' ','m','a','n','!','<'
-
-	END
+;*************************************************************************************************************************
+data1			db	"MicroP & MicroC,You Really Rock!",0
+endd                    End
