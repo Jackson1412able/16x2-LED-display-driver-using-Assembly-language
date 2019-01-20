@@ -5,10 +5,10 @@
 ;       THE LCD SCREEN AND A BUTTON TO DELETE CHARACTERS ENTERED WERE IMPLEMENTED                                       ;
 ;       THE CONNECTIONS OF THE MICROCHIP PIC18F4550 MICROCONTROLLER AND THE 16X2 LCD DISPLAY ARE SHOWN AS BELOW:        ;
 ;                                                                                                                       ;
-;			                  PORTD output to LCD display                                                                     ;
-;			                  RC0 = RS                                                                                        ;
-;			                  RC1 = R/W                                                                                       ;
-;			                  RC2 = E                                                                                         ;
+;                       PORTD output to LCD display                                                                     ;
+;                       RC0 = RS                                                                                        ;
+;                       RC1 = R/W                                                                                       ;
+;                       RC2 = E                                                                                         ;
 ;                       RB0~RB3 = R1,R2,R3,R4 of keypad (inputs)                                                        ;
 ;                       RB4~RB7 = C1,C2,C3,C4 of keypad (outputs)                                                       ;
 ;                       RA0 = Switch 1 (clear LCD screen)                                                               ;
@@ -303,7 +303,7 @@ checkDDRAM              movlw   0x50            ;ADDRESS OF 0X50 IS THE 17TH LOC
                         bcf     PORTC,1         ;R/W=0
                         movlw   0xc0            ;SHIFT DISPLAY TO LEFT, CURSOR TO RIGHT
                         movwf   PORTD           ;WRITE ADDRESS TO PORTD TO WRITE TO LCD DDRAM
-                        call    pulse		        ;SEND ADDRESS FROM PORTD TO LCD
+                        call    pulse           ;SEND ADDRESS FROM PORTD TO LCD
                         call    sdelay          ;JUMP TO SDELAY SUBROUTINE
 exit                    return                  ;RETURN FROM SUBROUTINE
 
@@ -326,7 +326,7 @@ back                    setf    TRISD           ;SET PORTD AS INPUTS
                         bcf     PORTC,0         ;RS=0
                         bcf     PORTC,1         ;R/W=0
                         movwf   PORTD           ;WRITE ADDRESS TO DDRAM
-                        call    pulse		        ;SEND ADDRESS FROM PORTD TO LCD
+                        call    pulse           ;SEND ADDRESS FROM PORTD TO LCD
                         call    sdelay          ;JUMP TO SDELAY SUBROUTINE
                         return                  ;RETURN FROM SUBROUTINE
                         
