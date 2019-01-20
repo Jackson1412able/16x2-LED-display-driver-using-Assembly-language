@@ -1,5 +1,5 @@
 ;************************************************************************************************************************     	
-;       THIS PROGRAM WAS DEVELOPED FOR A MICROCHIP PIC18F4550 MICROCONTROLLER TO DISPLAY AN ENTRY MADE FROM             ;                                                          ;
+;       THIS PROGRAM WAS DEVELOPED FOR A MICROCHIP PIC18F4550 MICROCONTROLLER TO DISPLAY AN ENTRY MADE FROM             ;
 ;       A 4X4 MATRIX KEYPAD ONTO THE 16X2 LCD DISPLAY. FOR EXAMPLE, IF ONE OF THE KEYPAD BUTTONS IS PUSHED, THE         ;
 ;       LCD SHOULD BE COMMANDED TO DISPLAY AN APPROPRIATE CHARACTER. FOR EXTRA FLEXIBILITIES, A BUTTON TO CLEAR         ;
 ;       THE LCD SCREEN AND A BUTTON TO DELETE CHARACTERS ENTERED WERE IMPLEMENTED                                       ;
@@ -130,7 +130,7 @@ senddata                movlw   upper(data1)    ;COPY CONTENTS FROM UPPER BYTE O
 ;****MAIN PROGRAM********************************************************************************************************
 lcdoutput               tblrd*+                 ;INCREMENT TABLE POINTER
                         movf    TABLAT,w        ;EXTRACT CHARACTER AND COPY TO WORKING REGISTER
-                        iorlw   0x00            ;CHECK IF IT IS 0X00 OR 0 IN DECIMAL AND HEXADECIMAL, IF 0, ZERO FLAG HIGH
+                        iorlw   0x00            ;CHECK IF IT IS 0X00 OR 0 IN DECIMAL AND HEXADECIMAL, IF 0, ZF HIGH
                         btfsc   STATUS,2	      ;IF ZERO FLAG HIGH, DONT SKIP NEXT INSTRUCTION
                         bra     keyoutput       ;JUMP TO KEYOUTPUT LABEL
                         call    display         ;PROCEED TO SEND DATA TO LCD
@@ -151,14 +151,14 @@ detectloop              call    checkDDRAM      ;CHECK CURRENT DDRAM ADDRESS
                         bra     clear_screen?   ;CHECK WHETHER CLEAR SCREEN BUTTON IS PRESSED
 no_clear                bra     backspace?      ;CHECK WHETHER BACKSPACE BUTTON IS PRESSED
 backspace               clrf    checkzero       ;CLEAR CHECKZERO REGISTER CONTENTS
-                        call    getkey          ;CHECK KEY PRESS ON KEYPAD, IF ANY KEYS ARE PRESSED, EQ VALUE IS PASSED TO WORKING REGISTER
+                        call    getkey          ;CHECK KEY PRESS ON KEYPAD, IF ANY KEYS ARE PRESSED, VALUE PASSED TO WREG
                         iorwf   checkzero       ;COMPARE WORKING REGISTER WITH EMPTY CONTENT (0X00)
                         bz      detectloop      ;BACK TO DETECT KEY PRESS AGAIN
                         movwf   pressed_key     ;PASS PRESSED VALUE TO PRESSED_KEY REGISTER
 waitkeyrelease          clrf    checkzero       ;CLEAR CHECKZERO REGISTER CONTENTS
                         call    getkey          ;CHECK KEY PRESS ON KEYPAD
                         iorwf   checkzero       ;COMPARE VALUE PRESSED WITH 0X00
-                        bnz     waitkeyrelease  ;IF PRESSED KEY IS NOT RELEASED, PROGRAM WAITS UNTIL RELEASE BY KEEP CHECKING
+                        bnz     waitkeyrelease  ;IF PRESSED KEY IS NOT RELEASED, PROGRAM WAITS UNTIL RELEASE
                         movf    pressed_key,0   ;MOVE PRESSED VALUE TO WORKING REGISTER
                         call    display         ;JUMP TO DISPLAY SUBROUTINE
                         nop
@@ -173,7 +173,7 @@ clear_screen?           btfsc   PORTA,0         ;RA0==0? 0 MEANS RA0 IS PRESSED
                         movwf   PORTD           ;CLEAR DISPLAY
                         call    pulse           ;SEND DATA TO LCD
                         call    checkBF         ;CHECK IF LCD IS BUSY
-                        bra     senddata        ;REPRINT THE "ENTER KEY" TEXT ON FIRST ROW OF LCD AGAIN AFTER CLEAR DISPLAY
+                        bra     senddata        ;REPRINT "ENTER KEY" TEXT ON FIRST ROW OF LCD AGAIN AFTER CLEAR DISPLAY
                         
 backspace?              btfsc   PORTA,1         ;RA1=0? 0 MEANS RA1 IS PRESSED
                         bra     backspace       ;JUMP BACK TO BACKSPACE LABEL
@@ -297,7 +297,7 @@ checkDDRAM              movlw   0x50            ;ADDRESS OF 0X50 IS THE 17TH LOC
                         nop
                         clrf    TRISD           ;SET PORTD AS OUTPUT
                         bcf     WREG,7          ;CLEAR BUSY FLAG OR 7TH BIT
-                        cpfseq  checkDDR        ;COMPARE READ ADDRESS AND ADDRESS STORED IN CHECKDDR REGISTER, SKIP NEXT IF EQUAL
+                        cpfseq  checkDDR        ;COMPARE READ ADDRESS AND ADDRESS IN CHECKDDR REGISTER, SKIP NEXT IF EQUAL
                         bra     exit            ;JUMP TO EXIT SUBROUTINE
                         bcf     PORTC,0         ;RS=0
                         bcf     PORTC,1         ;R/W=0
